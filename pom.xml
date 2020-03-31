@@ -12,7 +12,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<jdk.version>1.8</jdk.version>
+		<jdk.version>11</jdk.version>
 		<junit.version>4.12</junit.version>
 	</properties>
 	<url>http://maven.apache.org</url>
