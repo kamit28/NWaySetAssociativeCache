@@ -19,7 +19,7 @@ import com.amit.nwaycache.eviction.MRUPolicy;
 import com.amit.nwaycache.model.CacheConfig;
 
 /**
- * @author Anshu
+ * @author Amit
  *
  */
 public class MRUPolicyTest {

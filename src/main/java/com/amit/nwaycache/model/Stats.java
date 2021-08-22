@@ -1,5 +1,7 @@
 package com.amit.nwaycache.model;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * This class maintains the statistics of the cache instance. Statistics can
  * help in performance and accuracy measurement of the cache.
@@ -8,11 +10,11 @@ package com.amit.nwaycache.model;
  *
  */
 public class Stats implements Cloneable {
-	long cacheHits;
-	long cacheMisses;
-	long numEvictions;
-	long numUpdates;
-	int size;
+	private AtomicLong cacheHits;
+	private AtomicLong cacheMisses;
+	private AtomicLong numEvictions;
+	private AtomicLong numUpdates;
+	private int size;
 
 	/**
 	 * @param cacheHits
@@ -23,10 +25,10 @@ public class Stats implements Cloneable {
 	 */
 	public Stats(long cacheHits, long cacheMisses, long numEvictions,
 			long numUpdates, int size) {
-		this.cacheHits = cacheHits;
-		this.cacheMisses = cacheMisses;
-		this.numEvictions = numEvictions;
-		this.numUpdates = numUpdates;
+		this.cacheHits = new AtomicLong(cacheHits);
+		this.cacheMisses = new AtomicLong(cacheMisses);
+		this.numEvictions = new AtomicLong(numEvictions);
+		this.numUpdates = new AtomicLong(numUpdates);
 		this.size = size;
 	}
 
@@ -34,28 +36,28 @@ public class Stats implements Cloneable {
 	 * @return the cacheHits
 	 */
 	public long getCacheHits() {
-		return cacheHits;
+		return cacheHits.get();
 	}
 
 	/**
 	 * @return the cacheMisses
 	 */
 	public long getCacheMisses() {
-		return cacheMisses;
+		return cacheMisses.get();
 	}
 
 	/**
 	 * @return the numEvictions
 	 */
 	public long getNumEvictions() {
-		return numEvictions;
+		return numEvictions.get();
 	}
 
 	/**
 	 * @return the numUpdates
 	 */
 	public long getNumUpdates() {
-		return numUpdates;
+		return numUpdates.get();
 	}
 
 	/**
@@ -89,34 +91,44 @@ public class Stats implements Cloneable {
 	 * increments the numUpdates by one.
 	 */
 	public void incrementNumUpdates() {
-		++numUpdates;
+		numUpdates.incrementAndGet();
 	}
 
 	/**
 	 * increments the numEvictions by one.
 	 */
 	public void incrementNumEvictions() {
-		++numEvictions;
+		numEvictions.incrementAndGet();
 	}
 
 	/**
 	 * increments the cacheHits by one.
 	 */
 	public void incrementCacheHits() {
-		++cacheHits;
+		cacheHits.incrementAndGet();
 	}
 
 	/**
 	 * increments the cacheMisses by one.
 	 */
 	public void incrementCacheMisses() {
-		++cacheMisses;
+		cacheMisses.incrementAndGet();
 	}
 
 	@Override
 	public Object clone() {
-		final Stats clone = new Stats(cacheHits, cacheMisses, numEvictions,
-				numUpdates, size);
+		final Stats clone = new Stats(cacheHits.get(), cacheMisses.get(),
+				numEvictions.get(), numUpdates.get(), size);
 		return clone;
+	}
+	
+	/**
+	 * Clear all statistics
+	 */
+	public void clear() {
+		cacheHits.set(0);
+		cacheMisses.set(0);
+		numEvictions.set(0);
+		numUpdates.set(0);
 	}
 }

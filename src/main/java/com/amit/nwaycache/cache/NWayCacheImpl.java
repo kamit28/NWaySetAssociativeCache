@@ -13,8 +13,8 @@ import com.amit.nwaycache.model.CacheElement;
 import com.amit.nwaycache.model.Stats;
 
 /**
- * Implementation class for NWayCache. Implements the cache using a
- * one-dimensional array.
+ * Implementation class for NWayCache. Implements the cache using a list of
+ * one-dimensional arrays. Each array is a cache line (slot).
  * 
  * @author Amit
  *
@@ -131,29 +131,29 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 		int setNum = getSetNum(hash);
 		boolean putSucceeded = false;
 		CacheElement<K, V> element = new CacheElement<>(key, value);
-
 		CacheElement<K, V>[] set = cache.get(setNum);
 
-		for (int i = 0; i < set.length && !putSucceeded; i++) {
-			if (set[i] == null
-					|| (set[i].hashCode() == hash && set[i].getKey()
-							.equals(key))) {
-				set[i] = element;
-				getCachePolicy().update(setNum, i);
+		synchronized (set) {
+			for (int i = 0; i < set.length && !putSucceeded; i++) {
+				if (set[i] == null
+						|| (set[i].hashCode() == hash && set[i].getKey()
+								.equals(key))) {
+					set[i] = element;
+					getCachePolicy().update(setNum, i);
+					putSucceeded = true;
+				}
+			}
+
+			if (!putSucceeded) {
+				EvictionPolicy policy = getCachePolicy();
+				int index = policy.evict(setNum);
+				set[index] = element;
+				policy.update(setNum, index);
 				putSucceeded = true;
-				stats.incrementNumUpdates();
 			}
 		}
-
-		if (!putSucceeded) {
-			EvictionPolicy policy = getCachePolicy();
-			int index = policy.evict(setNum);
-			set[index] = element;
-			policy.update(setNum, index);
-			putSucceeded = true;
-			stats.incrementNumUpdates();
-			stats.incrementNumEvictions();
-		}
+		stats.incrementNumUpdates();
+		stats.incrementNumEvictions();
 	}
 
 	/**
@@ -167,24 +167,13 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 		int hash = key.hashCode();
 		int setNum = getSetNum(hash);
 		CacheElement<K, V>[] set = cache.get(setNum);
-		int elementIndex = getElementIndex(setNum, key, hash);
-		if (elementIndex != -1) {
-			value = set[elementIndex].getValue();
+		synchronized (set) {
+			int elementIndex = getElementIndex(setNum, key, hash);
+			if (elementIndex != -1) {
+				value = set[elementIndex].getValue();
+			}
 		}
-
 		return value;
-	}
-
-	/**
-	 * Returns start location for the set in which the element should be placed
-	 * or searched.
-	 * 
-	 * @param hash
-	 * @return the index of set in which the element should be placed /
-	 *         searched.
-	 */
-	private int getSetNum(int hash) {
-		return (hash % config.getNumSets());
 	}
 
 	/**
@@ -197,13 +186,27 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 		int hash = key.hashCode();
 		int setNum = getSetNum(hash);
 		CacheElement<K, V>[] set = cache.get(setNum);
-		int elementIndex = getElementIndex(setNum, key, hash);
-		if (elementIndex != -1) {
-			set[elementIndex] = null;
-			stats.incrementNumUpdates();
-			return true;
+		synchronized (set) {
+			int elementIndex = getElementIndex(setNum, key, hash);
+			if (elementIndex != -1) {
+				set[elementIndex] = null;
+				stats.incrementNumUpdates();
+				return true;
+			}
 		}
 		return false;
+	}
+
+	/**
+	 * Returns start location for the set in which the element should be placed
+	 * or searched.
+	 * 
+	 * @param hash
+	 * @return the index of set in which the element should be placed /
+	 *         searched.
+	 */
+	private int getSetNum(int hash) {
+		return (hash % config.getNumSets());
 	}
 
 	/**
@@ -241,12 +244,13 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void clear() {
+	public synchronized void clear() {
 		for (CacheElement<K, V>[] set : cache) {
 			for (int i = 0; i < set.length; i++) {
 				set[i] = null;
 			}
 		}
+		stats.clear();
 	}
 
 	/**
