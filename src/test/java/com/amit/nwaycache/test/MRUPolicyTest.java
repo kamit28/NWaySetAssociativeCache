@@ -3,15 +3,15 @@
  */
 package com.amit.nwaycache.test;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.amit.nwaycache.cache.NWayCache;
 import com.amit.nwaycache.cache.NWayCacheImpl;
@@ -29,7 +29,7 @@ public class MRUPolicyTest {
 	/**
 	 * @throws java.lang.Exception
 	 */
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		cache = NWayCacheImpl.getCache();
 		MRUPolicy mru = new MRUPolicy(4, 4);
@@ -50,7 +50,7 @@ public class MRUPolicyTest {
 	/**
 	 * @throws java.lang.Exception
 	 */
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		cache.clear();
 		cache = null;
