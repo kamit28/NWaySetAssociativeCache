@@ -1,93 +1,96 @@
 ----------------------------------------------
-N-Way Set Associative Cache
+# N-Way Set Associative Cache
 ----------------------------------------------
 
-Note** For design details please refer to the Technical Design Document.
+### Note** For design details please refer to the Technical Design Document.
 
-----------------------------------------------
-1. Dependencies
-----------------------------------------------
-a. Build dependencies:
-JDK 1.8
-maven 3.3.9
+### General Information
 
-b. Test dependencies:
-junit 4.12
+* Dependencies
 
-----------------------------------------------
-2. API Build
-----------------------------------------------
+Build dependencies:
+> JDK 16+ <br>
+> maven 3.3.9+
+
+Test dependencies:
+> jUnit 5.7.2 <br>
+> easy-mock 4.3
+
+
+* API Build
+
 For creating the build go to command-line and execute the following steps:
 Note**: We will refer to the source-code directory as PROJECT_DIR environment variable.
-	1. cd $PROJECT_DIR
-	2. mvn clean install
+	- cd $PROJECT_DIR
+	- mvn clean install
 		or mvn clean package
-	3. if the build was successful run command - cd target and Find the NWayCache.jar file
+	- if the build was successful run command - cd target and Find the NWayCache.jar file
 	
-----------------------------------------------
-3. API documents
-----------------------------------------------
+
+* API documents
+
 For generating the API documents go to command-line and execute the following steps:
 Note**: We will refer to the source-code directory as PROJECT_DIR environment variable.
-	1. cd $PROJECT_DIR
-	2. mvn javadoc:javadoc
-	3. if the build was successful run command - cd target and Find the java docs in
+	- cd $PROJECT_DIR
+	- mvn javadoc:javadoc
+	- if the build was successful run command - cd target and Find the java docs in
 		target/site/apidocs directory. The API doc index file will be index.html
 
-----------------------------------------------
-4. Cache Configuration
-----------------------------------------------
+
+* Cache Configuration
+
 The configuration file name is cache.properties. It can be found at $PROJECT_DIR/src/main/resources
 
 cache.lineSize -- set it to the desired value of N (slots in a set). N must be greater than 1.
 
 cache.size -- set this property to number of elements in cache. this must be a multiple of cache.lineSize
 
-cache.evictionPolicy.implClass -- set it to the name of the class implementing the cache replacement alogorithm
+cache.evictionPolicy.implClass -- set it to the name of the class implementing the cache replacement algorithm
 
 Sample setup:
 
-#Listing 1.	cache.properties:
-
+### Listing 1.	cache.properties:
+```
 cache.lineSize=4
 cache.size=1024
 cache.evictionPolicy.implClass=com.amit.nwaycache.eviction.LRUPolicy
+```
 
-----------------------------------------------
-4. How to use the Cache
-----------------------------------------------
+* How to use the Cache
+
 Steps:
-	1. Add NWayCache.jar in your CLASSPATH or use maven dependency management
+
+	- Add NWayCache.jar in your CLASSPATH or use maven dependency management
 		for maven projects
-		Example: CLASSPATH=$CLASSPATH:<path-to-jar>/NWayCache.jar
+		Example: CLASSPATH=$CLASSPATH:<path-to-jar>/nwaycache.jar
 	
-	2. If you have your own implementation of the cache replacement algorithm,
+	- If you have your own implementation of the cache replacement algorithm,
 		add the implementation class in to CLASSPATH or use maven dependency 
 		management for maven projects
 		
 		See section #5 for instructions to implement your own cache replacement
 		algorithm.
 	
-	3. Make sure that the cache.properties file is properly configured and
+	- Make sure that the cache.properties file is properly configured and
 		added to the CLASSPATH
 	
-	4. Create your cache client implementation and run it. See section #6 for
+	- Create your cache client implementation and run it. See section #6 for
 		a usage example.
 	
-----------------------------------------------
-5. How to implement your own replacement policy
-----------------------------------------------
-1. Create a class by implementing the EvictionPolicy interface
-2. Override the evict and (optionally) update methods and provide your implementation.
+
+* How to implement your own replacement policy
+
+- Create a class by implementing the EvictionPolicy interface
+- Override the evict and (optionally) update methods and provide your implementation.
 
 Example:
 	if I want to implement a customize algorithm like LFU (Least Frequently Used)
 	that chooses the victim based on the hitCount or the number of times the
 	element has been accessed, I would write the following class:
 
-#Listing 2.	LFUPolicy.java
+### Listing 2.	LFUPolicy.java
 
-#Code Starts Here
+```java
 
 package com.amit.custom.policy;
 
@@ -162,23 +165,25 @@ public class LFUPolicy implements EvictionPolicy  {
 		stats.hitCount++;
 	}
 }
-#Code ends here
+```
+
+### Listing 3. cache.properties
 
 The cache.properties would look as below:
-#Listing 3. cache.properties
+
+```
 cache.lineSize=4
 cache.size=1024
 cache.evictionPolicy.implClass=com.amit.custom.policy.LFUPolicy
+```
 
-----------------------------------------------
-6. How to use the Cache
-----------------------------------------------
+* How to use the Cache
+
 To use the cache please follow the example listing below:
 
-#Listing 4.	NWayCacheClient.java
+### Listing 4.	NWayCacheClient.java
 
-# Code starts here
-
+```java
 package com.amit.client;
 
 import com.amit.nwaycache.cache.NWayCache;
@@ -223,10 +228,8 @@ public class NWayCacheClient {
 		System.out.println(cache.getStats().toString());
 	}
 }
-	
-# Code ends here
+```
 
-----------------------------------------------
-7. Meta
-----------------------------------------------
-Author:	Amit Kumar
+
+### Author
+- [Amit Kumar]
