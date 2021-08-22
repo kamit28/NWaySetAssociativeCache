@@ -1,15 +1,14 @@
 package com.amit.nwaycache.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.amit.nwaycache.cache.NWayCache;
 import com.amit.nwaycache.cache.NWayCacheImpl;
@@ -24,13 +23,10 @@ import com.amit.nwaycache.model.Stats;
 public class NWayCacheTest {
 	private NWayCache<Integer, String> cache;
 
-	@Rule
-	public final ExpectedException exception = ExpectedException.none();
-
 	/**
 	 * @throws java.lang.Exception
 	 */
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		cache = NWayCacheImpl.getCache();
 		assertNotNull(cache);
@@ -57,8 +53,9 @@ public class NWayCacheTest {
 	public final void testPutIfKeyIsNull() {
 		Integer key = null;
 		String value = "null";
-		exception.expect(IllegalArgumentException.class);
-		cache.put(key, value);
+		assertThrows(IllegalArgumentException.class, () -> {
+			cache.put(key, value);
+		});
 	}
 
 	/**
@@ -121,7 +118,7 @@ public class NWayCacheTest {
 		assertEquals("Value should be Twenty Three", "Twenty Three", value);
 		// now lets remove this
 		boolean result = cache.remove(23);
-		assertTrue("value of result should be true", result);
+		assertTrue(result);
 		// try to get the value again
 		value = cache.get(23);
 		assertNull("value must be null", value);
