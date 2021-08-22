@@ -1,7 +1,6 @@
 package com.amit.nwaycache.test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -105,7 +104,6 @@ public class NWayCacheTest {
 		assertEquals("Should return true", "Two", value);
 		value = cache.get(4);
 		assertNull("value should be null", value);
-		assertNotEquals("value should be 34", "Thirty Five", value);
 	}
 
 	/**
