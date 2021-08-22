@@ -6,6 +6,8 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.amit.nwaycache.eviction.EvictionPolicy;
 import com.amit.nwaycache.model.CacheConfig;
@@ -18,10 +20,8 @@ import com.amit.nwaycache.model.Stats;
  * 
  * @author Amit
  *
- * @param <K>
- *            key class of the cache element.
- * @param <V>
- *            value class of the cache element.
+ * @param <K> key class of the cache element.
+ * @param <V> value class of the cache element.
  */
 public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 
@@ -46,23 +46,23 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 	 */
 	private static final String propFileName = "cache.properties";
 
+	ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+
 	/**
-	 * Static factory method for instantiation the cache. The cache properties
-	 * are read from the <tt>cache.properties</tt> file which must be available
-	 * on the CLASSPATH.
+	 * Static factory method for instantiation the cache. The cache properties are
+	 * read from the <tt>cache.properties</tt> file which must be available on the
+	 * CLASSPATH.
 	 * 
 	 * @return cache object.
 	 * @throws Exception
 	 */
 	public static <K, V> NWayCache<K, V> getCache() throws Exception {
 		Properties cacheProps = new Properties();
-		InputStream inStream = NWayCacheImpl.class.getClassLoader()
-				.getResourceAsStream(propFileName);
+		InputStream inStream = NWayCacheImpl.class.getClassLoader().getResourceAsStream(propFileName);
 		if (inStream != null) {
 			cacheProps.load(inStream);
 		} else {
-			throw new FileNotFoundException("Property file: " + propFileName
-					+ " was not found on classpath.");
+			throw new FileNotFoundException("Property file: " + propFileName + " was not found on classpath.");
 		}
 		EvictionPolicy evictionPolicy;
 		int cacheSize = 10240;
@@ -70,45 +70,39 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 		String policyClass = "com.amit.nwaycache.eviction.LRUPolicy";
 
 		if (null != cacheProps.getProperty("cache.lineSize")) {
-			lineSize = Integer.parseInt(cacheProps
-					.getProperty("cache.lineSize"));
+			lineSize = Integer.parseInt(cacheProps.getProperty("cache.lineSize"));
 			if (!(lineSize >= 2)) {
-				throw new IllegalArgumentException(
-						"Line size must be greater than or equal to 2");
+				throw new IllegalArgumentException("Line size must be greater than or equal to 2");
 			}
 		}
 
 		if (null != cacheProps.getProperty("cache.size")) {
 			cacheSize = Integer.parseInt(cacheProps.getProperty("cache.size"));
 			if (!(cacheSize >= lineSize && cacheSize % lineSize == 0)) {
-				throw new IllegalArgumentException(
-						"Cache size must be multiple of lineSize");
+				throw new IllegalArgumentException("Cache size must be multiple of lineSize");
 			}
 		}
 
 		if (null != cacheProps.getProperty("cache.evictionPolicy.implClass")) {
-			policyClass = cacheProps
-					.getProperty("cache.evictionPolicy.implClass");
+			policyClass = cacheProps.getProperty("cache.evictionPolicy.implClass");
 		}
 
 		Class<?>[] args = new Class[2];
 		args[0] = int.class;
 		args[1] = int.class;
 		@SuppressWarnings("unchecked")
-		Constructor<EvictionPolicy> ct = (Constructor<EvictionPolicy>) Class
-				.forName(policyClass).getDeclaredConstructor(args);
+		Constructor<EvictionPolicy> ct = (Constructor<EvictionPolicy>) Class.forName(policyClass)
+				.getDeclaredConstructor(args);
 
 		evictionPolicy = ct.newInstance((cacheSize / lineSize), lineSize);
 
-		CacheConfig config = new CacheConfig(cacheSize, lineSize,
-				evictionPolicy);
+		CacheConfig config = new CacheConfig(cacheSize, lineSize, evictionPolicy);
 		NWayCache<K, V> cache = new NWayCacheImpl<K, V>(config);
 		return cache;
 	}
 
 	/**
-	 * @param config
-	 *            the configuration of the cache
+	 * @param config the configuration of the cache
 	 */
 	@SuppressWarnings("unchecked")
 	private NWayCacheImpl(final CacheConfig config) {
@@ -132,12 +126,10 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 		boolean putSucceeded = false;
 		CacheElement<K, V> element = new CacheElement<>(key, value);
 		CacheElement<K, V>[] set = cache.get(setNum);
-
-		synchronized (set) {
+		readWriteLock.writeLock().lock();
+		try {
 			for (int i = 0; i < set.length && !putSucceeded; i++) {
-				if (set[i] == null
-						|| (set[i].hashCode() == hash && set[i].getKey()
-								.equals(key))) {
+				if (set[i] == null || (set[i].hashCode() == hash && set[i].getKey().equals(key))) {
 					set[i] = element;
 					getCachePolicy().update(setNum, i);
 					putSucceeded = true;
@@ -151,9 +143,12 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 				policy.update(setNum, index);
 				putSucceeded = true;
 			}
+
+			stats.incrementNumUpdates();
+			stats.incrementNumEvictions();
+		} finally {
+			readWriteLock.writeLock().unlock();
 		}
-		stats.incrementNumUpdates();
-		stats.incrementNumEvictions();
 	}
 
 	/**
@@ -167,11 +162,14 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 		int hash = key.hashCode();
 		int setNum = getSetNum(hash);
 		CacheElement<K, V>[] set = cache.get(setNum);
-		synchronized (set) {
+		readWriteLock.readLock().lock();
+		try {
 			int elementIndex = getElementIndex(setNum, key, hash);
 			if (elementIndex != -1) {
 				value = set[elementIndex].getValue();
 			}
+		} finally {
+			readWriteLock.readLock().unlock();
 		}
 		return value;
 	}
@@ -186,24 +184,26 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 		int hash = key.hashCode();
 		int setNum = getSetNum(hash);
 		CacheElement<K, V>[] set = cache.get(setNum);
-		synchronized (set) {
+		readWriteLock.writeLock().lock();
+		try {
 			int elementIndex = getElementIndex(setNum, key, hash);
 			if (elementIndex != -1) {
 				set[elementIndex] = null;
 				stats.incrementNumUpdates();
 				return true;
 			}
+		} finally {
+			readWriteLock.writeLock().unlock();
 		}
 		return false;
 	}
 
 	/**
-	 * Returns start location for the set in which the element should be placed
-	 * or searched.
+	 * Returns start location for the set in which the element should be placed or
+	 * searched.
 	 * 
 	 * @param hash
-	 * @return the index of set in which the element should be placed /
-	 *         searched.
+	 * @return the index of set in which the element should be placed / searched.
 	 */
 	private int getSetNum(int hash) {
 		return (hash % config.getNumSets());
@@ -212,12 +212,9 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 	/**
 	 * Returns the index of the key in the cache, if found, -1 otherwise.
 	 * 
-	 * @param setNum
-	 *            the set number to be searched.
-	 * @param key
-	 *            key of the element whose index is required.
-	 * @param hash
-	 *            hash of the key
+	 * @param setNum the set number to be searched.
+	 * @param key    key of the element whose index is required.
+	 * @param hash   hash of the key
 	 * @return the index of the element in the cache, if found, -1 otherwise
 	 */
 	private int getElementIndex(int setNum, K key, int hash) {
@@ -244,13 +241,18 @@ public class NWayCacheImpl<K, V> implements NWayCache<K, V> {
 	 * {@inheritDoc}
 	 */
 	@Override
-	public synchronized void clear() {
-		for (CacheElement<K, V>[] set : cache) {
-			for (int i = 0; i < set.length; i++) {
-				set[i] = null;
+	public void clear() {
+		readWriteLock.writeLock().lock();
+		try {
+			for (CacheElement<K, V>[] set : cache) {
+				for (int i = 0; i < set.length; i++) {
+					set[i] = null;
+				}
 			}
+			stats.clear();
+		} finally {
+			readWriteLock.writeLock().unlock();
 		}
-		stats.clear();
 	}
 
 	/**
