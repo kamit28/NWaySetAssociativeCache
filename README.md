@@ -50,7 +50,7 @@ cache.evictionPolicy.implClass -- set it to the name of the class implementing t
 Sample setup:
 
 ### Listing 1.	cache.properties:
-```
+```properties
 cache.lineSize=4
 cache.size=1024
 cache.evictionPolicy.implClass=com.amit.nwaycache.eviction.LRUPolicy
@@ -171,7 +171,7 @@ public class LFUPolicy implements EvictionPolicy  {
 
 The cache.properties would look as below:
 
-```
+```properties
 cache.lineSize=4
 cache.size=1024
 cache.evictionPolicy.implClass=com.amit.custom.policy.LFUPolicy
